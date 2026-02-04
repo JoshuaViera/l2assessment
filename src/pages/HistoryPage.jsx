@@ -22,9 +22,18 @@ function HistoryPage() {
     }
   }
 
-  const sortedHistory = [...history].sort((a, b) => 
-    a.message.localeCompare(b.message)
-  )
+  const deleteMessage = (index) => {
+    if (window.confirm('Delete this message from history?')) {
+      const updatedHistory = history.filter((_, i) => i !== index)
+      localStorage.setItem('triageHistory', JSON.stringify(updatedHistory))
+      setHistory(updatedHistory)
+      setExpandedIndex(null)
+    }
+  }
+
+  const sortedHistory = [...history].sort((a, b) => {
+    return new Date(b.timestamp) - new Date(a.timestamp)
+  })
   
   const filteredHistory = filter === 'all' 
     ? sortedHistory 
@@ -51,7 +60,6 @@ function HistoryPage() {
             )}
           </div>
 
-          {/* Filter Buttons */}
           {history.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
               <button
@@ -81,10 +89,8 @@ function HistoryPage() {
           )}
         </div>
 
-        {/* History List */}
         {filteredHistory.length === 0 && (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="text-5xl mb-4">📭</div>
             <div className="text-xl text-gray-600 mb-2">No history yet</div>
             <p className="text-gray-500 mb-6">
               Analyzed messages will appear here
@@ -99,72 +105,80 @@ function HistoryPage() {
         )}
 
         <div className="space-y-4">
-          {filteredHistory.map((item, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
-            >
+          {filteredHistory.map((item, index) => {
+            const originalIndex = history.findIndex(h => h.timestamp === item.timestamp)
+            
+            return (
               <div
-                className="p-4 cursor-pointer hover:bg-gray-50"
-                onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                key={index}
+                className="bg-white rounded-lg shadow-md overflow-hidden"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-500 mb-1">
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="text-sm text-gray-500">
                       {new Date(item.timestamp).toLocaleString()}
                     </div>
-                    <div className="text-gray-800 font-medium mb-2">
-                      "{item.message.substring(0, 100)}{item.message.length > 100 ? '...' : ''}"
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+                    <button
+                      onClick={() => deleteMessage(originalIndex)}
+                      className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                    <div className="text-sm font-semibold text-gray-600 mb-1">Message</div>
+                    <div className="text-gray-800">{item.message}</div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Category</div>
+                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
                         {item.category}
                       </span>
-                      <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Urgency</div>
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
                         item.urgency === 'High' ? 'bg-red-200 text-red-900' :
                         item.urgency === 'Medium' ? 'bg-yellow-200 text-yellow-900' :
                         'bg-green-200 text-green-900'
                       }`}>
-                        {item.urgency} Urgency
+                        {item.urgency}
                       </span>
                     </div>
-                  </div>
-                  <div className="text-gray-400 ml-4">
-                    {expandedIndex === index ? '▲' : '▼'}
-                  </div>
-                </div>
-              </div>
-
-              {expandedIndex === index && (
-                <div className="border-t border-gray-200 p-4 bg-gray-50">
-                  <div className="space-y-3">
                     <div>
-                      <div className="text-xs font-semibold text-gray-600 mb-1">Full Message</div>
-                      <div className="text-sm text-gray-800 bg-white p-3 rounded border border-gray-200">
-                        {item.message}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-gray-600 mb-1">Recommended Action</div>
-                      <div className="text-sm text-gray-800 bg-purple-50 p-3 rounded border border-purple-200">
+                      <div className="text-xs text-gray-500 mb-1">Action</div>
+                      <div className="text-sm text-gray-700 font-medium">
                         {item.recommendedAction}
                       </div>
                     </div>
-                    <div>
-                      <div className="text-xs font-semibold text-gray-600 mb-1">AI Reasoning</div>
-                      <div className="bg-white p-3 rounded border border-gray-200">
-                        <div className="prose prose-sm max-w-none text-gray-700">
-                          <ReactMarkdown>
-                            {item.reasoning}
-                          </ReactMarkdown>
-                        </div>
+                  </div>
+
+                  <button
+                    onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center"
+                  >
+                    {expandedIndex === index ? 'Hide' : 'Show'} AI Reasoning
+                  </button>
+                </div>
+
+                {expandedIndex === index && (
+                  <div className="border-t border-gray-200 p-5 bg-gray-50">
+                    <div className="text-xs font-semibold text-gray-600 mb-2">AI Reasoning</div>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="prose prose-sm max-w-none text-gray-700">
+                        <ReactMarkdown>
+                          {item.reasoning}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
